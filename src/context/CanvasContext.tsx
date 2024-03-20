@@ -1,3 +1,6 @@
+interface ITextExtended extends fabric.IText {
+    id: string;
+}
 "use client";
 // CanvasContext.tsx
 import { createContext, useContext, useEffect, useState, useRef } from "react";
@@ -36,6 +39,26 @@ interface CanvasContextProps {
     const [fontWeight, setFontWeight] = useState("normal");
     const [textColor, setTextColor] = useState("#ffffff");
 
+  const updateTextOnServer = async (selectedObject: ITextExtended) => {
+    const response = await fetch('/api/update-text', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            id: selectedObject.id,
+            text: selectedObject.text,
+            fontSize: selectedObject.fontSize,
+            fontFamily: selectedObject.fontFamily,
+            fontWeight: selectedObject.fontWeight,
+            fill: selectedObject.fill,
+        }),
+    });
+
+    if (!response.ok) {
+        console.error('Failed to update text on server');
+    }
+};
 
   useEffect(() => {
     if (canvasRef.current && !canvasInstanceRef.current) {
@@ -52,21 +75,19 @@ interface CanvasContextProps {
   useEffect(() => {
     if (canvasInstanceRef.current) {
         canvasInstanceRef.current.on("selection:created", (e) => {
-          const selectedObject = e.target;
-          if (selectedObject && selectedObject.type === "i-text") {
+        const selectedObject = { ...(e.target as fabric.IText), id: 'some-id' } as ITextExtended;
+        if (selectedObject && selectedObject.type === "i-text") {
             setSelectedObject(selectedObject);
-            // Here you would call your function to update the selected text on the server
-            // updateTextOnServer(selectedObject);
-          }
+            updateTextOnServer(selectedObject);
+        }
         });
-  
+
         canvasInstanceRef.current.on("selection:updated", (e) => {
-          const selectedObject = e.target;
-          if (selectedObject && selectedObject.type === "i-text") {
+        const selectedObject = { ...(e.target as fabric.IText), id: 'some-id' } as ITextExtended;
+        if (selectedObject && selectedObject.type === "i-text") {
             setSelectedObject(selectedObject);
-            // Here you would call your function to update the selected text on the server
-            // updateTextOnServer(selectedObject);
-          }
+            updateTextOnServer(selectedObject);
+        }
         });
   
         canvasInstanceRef.current.on("selection:cleared", () => {
