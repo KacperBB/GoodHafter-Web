@@ -163,22 +163,23 @@ export const CanvasProvider: React.FC<React.PropsWithChildren<{}>> = ({
     }
   };
 
-  useEffect(() => {
+useEffect(() => {
     if (
-      canvasInstanceRef.current &&
-      selectedObject &&
-      selectedObject.type === "i-text"
+        canvasInstanceRef.current &&
+        selectedObject &&
+        selectedObject.type === "i-text"
     ) {
-      // Aktualizacja właściwości zaznaczonego obiektu tekstowego na płótnie
-      (selectedObject as fabric.IText).set({
-        fontFamily: selectedFont,
-        fontSize: fontSize,
-        fontWeight: fontWeight,
-        fill: textColor,
-      });
-      canvasInstanceRef.current.requestRenderAll();
+        // Aktualizacja właściwości zaznaczonego obiektu tekstowego na płótnie
+        const textObject = selectedObject as fabric.IText;
+        textObject.set({
+            fontFamily: selectedFont,
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            fill: textColor,
+        });
+        canvasInstanceRef.current.requestRenderAll();
     }
-  }, [selectedFont, fontSize, fontWeight, textColor, selectedObject]);
+}, [selectedFont, fontSize, fontWeight, textColor, selectedObject]);
 
   return (
     <CanvasContext.Provider
