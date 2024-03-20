@@ -177,7 +177,7 @@ useEffect(() => {
             fontWeight: fontWeight,
             fill: textColor,
         });
-        canvasInstanceRef.current.requestRenderAll();
+        textObject.canvas?.renderAll(); // Wymuszenie aktualizacji obiektu na płótnie
     }
 }, [selectedFont, fontSize, fontWeight, textColor, selectedObject]);
 
