@@ -1,64 +1,66 @@
-interface ITextExtended extends fabric.IText {
-    id: string;
-}
 "use client";
 // CanvasContext.tsx
 import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { fabric } from "fabric";
+
+interface ITextExtended extends fabric.IText {
+  id: string;
+}
+
 interface CanvasContextProps {
-    canvas: fabric.Canvas | null;
-    selectedFont: string;
-    setSelectedFont: React.Dispatch<React.SetStateAction<string>>;
-    fontSize: number;
-    setFontSize: React.Dispatch<React.SetStateAction<number>>;
-    fontWeight: string;
-    setFontWeight: React.Dispatch<React.SetStateAction<string>>;
-    textColor: string;
-    setTextColor: React.Dispatch<React.SetStateAction<string>>;
-    addText: () => void;
-    addImage: (url: string) => void;
-    downloadCanvas: () => void; 
-    deleteSelected: () => void;
-    resetCanvas: () => void;
-  }
-  
-  export const CanvasContext = createContext<CanvasContextProps | undefined>(
-    undefined
+  canvas: fabric.Canvas | null;
+  selectedFont: string;
+  setSelectedFont: React.Dispatch<React.SetStateAction<string>>;
+  fontSize: number;
+  setFontSize: React.Dispatch<React.SetStateAction<number>>;
+  fontWeight: string;
+  setFontWeight: React.Dispatch<React.SetStateAction<string>>;
+  textColor: string;
+  setTextColor: React.Dispatch<React.SetStateAction<string>>;
+  addText: () => void;
+  addImage: (url: string) => void;
+  downloadCanvas: () => void;
+  deleteSelected: () => void;
+  resetCanvas: () => void;
+}
+
+export const CanvasContext = createContext<CanvasContextProps | undefined>(
+  undefined
+);
+
+export const CanvasProvider: React.FC<React.PropsWithChildren<{}>> = ({
+  children,
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasInstanceRef = useRef<fabric.Canvas | null>(null);
+  const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(
+    null
   );
-  
-  export const CanvasProvider: React.FC<React.PropsWithChildren<{}>> = ({
-    children,
-  }) => {
-    const canvasRef = useRef<HTMLCanvasElement | null>(null);
-    const canvasInstanceRef = useRef<fabric.Canvas | null>(null);
-    const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(
-      null
-    );
-    const [selectedFont, setSelectedFont] = useState("Arial");
-    const [fontSize, setFontSize] = useState(20);
-    const [fontWeight, setFontWeight] = useState("normal");
-    const [textColor, setTextColor] = useState("#ffffff");
+  const [selectedFont, setSelectedFont] = useState("Arial");
+  const [fontSize, setFontSize] = useState(20);
+  const [fontWeight, setFontWeight] = useState("normal");
+  const [textColor, setTextColor] = useState("#ffffff");
 
   const updateTextOnServer = async (selectedObject: ITextExtended) => {
-    const response = await fetch('/api/update-text', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            id: selectedObject.id,
-            text: selectedObject.text,
-            fontSize: selectedObject.fontSize,
-            fontFamily: selectedObject.fontFamily,
-            fontWeight: selectedObject.fontWeight,
-            fill: selectedObject.fill,
-        }),
+    const response = await fetch("/api/update-text", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: selectedObject.id,
+        text: selectedObject.text,
+        fontSize: selectedObject.fontSize,
+        fontFamily: selectedObject.fontFamily,
+        fontWeight: selectedObject.fontWeight,
+        fill: selectedObject.fill,
+      }),
     });
 
     if (!response.ok) {
-        console.error('Failed to update text on server');
+      console.error("Failed to update text on server");
     }
-};
+  };
 
   useEffect(() => {
     if (canvasRef.current && !canvasInstanceRef.current) {
@@ -74,48 +76,40 @@ interface CanvasContextProps {
   //Realtime editing
   useEffect(() => {
     if (canvasInstanceRef.current) {
-        canvasInstanceRef.current.on("text:changed", (e) => {
-          const selectedObject = { ...(e.target as fabric.IText), id: 'some-id' } as ITextExtended;
-          if (selectedObject && selectedObject.type === "i-text") {
-            setSelectedObject(selectedObject);
-            updateTextOnServer(selectedObject);
-          }
-        });
+      canvasInstanceRef.current.on("text:changed", (e) => {
+        const selectedObject = {
+          ...(e.target as fabric.IText),
+          id: "some-id",
+        } as ITextExtended;
+        if (selectedObject && selectedObject.type === "i-text") {
+          setSelectedObject(selectedObject);
+          updateTextOnServer(selectedObject);
+        }
+      });
 
-        canvasInstanceRef.current.on("text:changed", (e) => {
-            const selectedObject = { ...(e.target as fabric.IText), id: 'some-id' } as ITextExtended;
-            if (selectedObject && selectedObject.type === "i-text") {
-                setSelectedObject(selectedObject);
-                updateTextOnServer(selectedObject);
-            }
-        });
-  
-        canvasInstanceRef.current.on("selection:cleared", () => {
-          setSelectedObject(null);
-          // Here you would call your function to clear the selected text on the server
-          // clearSelectedText();
-        });
-      canvasInstanceRef.current.on('selection:created', (e) => {
+      canvasInstanceRef.current.on("selection:cleared", () => {
+        setSelectedObject(null);
+      });
+
+      canvasInstanceRef.current.on("selection:created", (e) => {
         const selectedObject = e.target;
-        if (selectedObject && (selectedObject.type === 'i-text' || selectedObject.type === 'image')) {
+        if (
+          selectedObject &&
+          (selectedObject.type === "i-text" || selectedObject.type === "image")
+        ) {
           setSelectedObject(selectedObject);
         }
       });
-      
-      canvasInstanceRef.current.on('selection:updated', (e) => {
+
+      canvasInstanceRef.current.on("selection:updated", (e) => {
         const selectedObject = e.target;
-        if (selectedObject && (selectedObject.type === 'i-text' || selectedObject.type === 'image')) {
+        if (
+          selectedObject &&
+          (selectedObject.type === "i-text" || selectedObject.type === "image")
+        ) {
           setSelectedObject(selectedObject);
         }
       });
-      
-      // Dodaj funkcję do aktualizacji wybranego obrazu
-      const updateSelectedImage = (newProps: Partial<fabric.IImageOptions>) => {
-        if (selectedObject && selectedObject.type === 'image') {
-          selectedObject.set(newProps);
-          canvasInstanceRef.current?.requestRenderAll();
-        }
-      };
     }
   }, [selectedObject]);
 
@@ -135,45 +129,11 @@ interface CanvasContextProps {
       text.enterEditing();
     });
 
-    const addImage = (url: string) => {
-        fabric.Image.fromURL(url, function (img) {
-          if (canvasInstanceRef.current && img) {
-            img.set({
-              left: 50,
-              top: 50,
-              selectable: true,
-              hasControls: true,
-            });
-            canvasInstanceRef.current.add(img);
-            canvasInstanceRef.current.setActiveObject(img);
-            canvasInstanceRef.current.requestRenderAll();
-          }
-        });
-      };
-      
     canvasInstanceRef.current?.add(text);
     canvasInstanceRef.current?.setActiveObject(text);
     canvasInstanceRef.current?.requestRenderAll();
   };
 
-  const downloadCanvas = () => {
-    if (canvasInstanceRef.current) {
-      const dataUrl = canvasInstanceRef.current.toDataURL({ format: 'png' });
-      const a = document.createElement('a');
-      a.href = dataUrl;
-      a.download = 'canvas.png';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-  };
-  //funckja do aktualizacji wybranego tekstu
-  const updateSelectedText = (newProps: Partial<fabric.ITextOptions>) => {
-    if (selectedObject && selectedObject.type === "i-text") {
-      selectedObject.set(newProps);
-      canvasInstanceRef.current?.requestRenderAll();
-    }
-  };
   const addImage = (url: string) => {
     fabric.Image.fromURL(url, function (img) {
       if (canvasInstanceRef.current && img) {
@@ -188,7 +148,6 @@ interface CanvasContextProps {
         canvasInstanceRef.current.requestRenderAll();
       }
     });
-
   };
 
   const deleteSelected = () => {
@@ -203,14 +162,30 @@ interface CanvasContextProps {
       canvasInstanceRef.current.clear();
     }
   };
+
+  useEffect(() => {
+    if (
+      canvasInstanceRef.current &&
+      selectedObject &&
+      selectedObject.type === "i-text"
+    ) {
+      // Aktualizacja właściwości zaznaczonego obiektu tekstowego na płótnie
+      (selectedObject as fabric.IText).set({
+        fontFamily: selectedFont,
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        fill: textColor,
+      });
+      canvasInstanceRef.current.requestRenderAll();
+    }
+  }, [selectedFont, fontSize, fontWeight, textColor, selectedObject]);
+
   return (
     <CanvasContext.Provider
       value={{
         canvas: canvasInstanceRef.current,
         selectedFont,
-        downloadCanvas,
         setSelectedFont,
-        addImage,
         fontSize,
         setFontSize,
         fontWeight,
@@ -220,20 +195,22 @@ interface CanvasContextProps {
         addText,
         deleteSelected,
         resetCanvas,
+        addImage,
+        downloadCanvas: () => {},
       }}
     >
-           <canvas ref={canvasRef} />
+      <canvas ref={canvasRef} />
       {children}
     </CanvasContext.Provider>
   );
 };
 
 export const useCanvas = () => {
-    const context = useContext(CanvasContext);
-    if (context === undefined) {
-      throw new Error("useCanvas must be used within a CanvasProvider");
-    }
-    return context;
-  };
-  
-  export default useCanvas;
+  const context = useContext(CanvasContext);
+  if (context === undefined) {
+    throw new Error("useCanvas must be used within a CanvasProvider");
+  }
+  return context;
+};
+
+export default useCanvas;
