@@ -2,7 +2,6 @@
 // CanvasContext.tsx
 import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { fabric } from "fabric";
-
 interface CanvasContextProps {
     canvas: fabric.Canvas | null;
     selectedFont: string;
@@ -19,22 +18,24 @@ interface CanvasContextProps {
     deleteSelected: () => void;
     resetCanvas: () => void;
   }
-export const CanvasContext = createContext<CanvasContextProps | undefined>(
-  undefined
-);
-
-export const CanvasProvider: React.FC<React.PropsWithChildren<{}>> = ({
-  children,
-}) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const canvasInstanceRef = useRef<fabric.Canvas | null>(null);
-  const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(
-    null
+  
+  export const CanvasContext = createContext<CanvasContextProps | undefined>(
+    undefined
   );
-  const [selectedFont, setSelectedFont] = useState("Arial");
-  const [fontSize, setFontSize] = useState(20);
-  const [fontWeight, setFontWeight] = useState("normal");
-  const [textColor, setTextColor] = useState("#ffffff");
+  
+  export const CanvasProvider: React.FC<React.PropsWithChildren<{}>> = ({
+    children,
+  }) => {
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const canvasInstanceRef = useRef<fabric.Canvas | null>(null);
+    const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(
+      null
+    );
+    const [selectedFont, setSelectedFont] = useState("Arial");
+    const [fontSize, setFontSize] = useState(20);
+    const [fontWeight, setFontWeight] = useState("normal");
+    const [textColor, setTextColor] = useState("#ffffff");
+
 
   useEffect(() => {
     if (canvasRef.current && !canvasInstanceRef.current) {
@@ -50,23 +51,29 @@ export const CanvasProvider: React.FC<React.PropsWithChildren<{}>> = ({
   //Realtime editing
   useEffect(() => {
     if (canvasInstanceRef.current) {
-      canvasInstanceRef.current.on("selection:created", (e) => {
-        const selectedObject = e.target;
-        if (selectedObject && selectedObject.type === "i-text") {
-          setSelectedObject(selectedObject);
-        }
-      });
-
-      canvasInstanceRef.current.on("selection:updated", (e) => {
-        const selectedObject = e.target;
-        if (selectedObject && selectedObject.type === "i-text") {
-          setSelectedObject(selectedObject);
-        }
-      });
-
-      canvasInstanceRef.current.on("selection:cleared", () => {
-        setSelectedObject(null);
-      });
+        canvasInstanceRef.current.on("selection:created", (e) => {
+          const selectedObject = e.target;
+          if (selectedObject && selectedObject.type === "i-text") {
+            setSelectedObject(selectedObject);
+            // Here you would call your function to update the selected text on the server
+            // updateTextOnServer(selectedObject);
+          }
+        });
+  
+        canvasInstanceRef.current.on("selection:updated", (e) => {
+          const selectedObject = e.target;
+          if (selectedObject && selectedObject.type === "i-text") {
+            setSelectedObject(selectedObject);
+            // Here you would call your function to update the selected text on the server
+            // updateTextOnServer(selectedObject);
+          }
+        });
+  
+        canvasInstanceRef.current.on("selection:cleared", () => {
+          setSelectedObject(null);
+          // Here you would call your function to clear the selected text on the server
+          // clearSelectedText();
+        });
       canvasInstanceRef.current.on('selection:created', (e) => {
         const selectedObject = e.target;
         if (selectedObject && (selectedObject.type === 'i-text' || selectedObject.type === 'image')) {

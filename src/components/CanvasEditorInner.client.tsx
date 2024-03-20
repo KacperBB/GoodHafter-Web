@@ -10,6 +10,7 @@ import FontSelector from "./functionButtons/FontSelector";
 import FontSizeInput from "./functionButtons/FontSizeInput";
 import TextColorInput from "./functionButtons/TextColorInput";
 import FontWeightSelector from "./functionButtons/FontWeightSelector";
+import AddImageButton from "./functionButtons/AddImageButton";
 
 const CanvasEditor = () => {
   const [isClient, setIsClient] = useState(false);
@@ -100,6 +101,7 @@ const CanvasEditor = () => {
         <FontSizeInput />
         <FontWeightSelector />
         <TextColorInput />
+        <AddImageButton />
     </div>
   ) : null;
 };
