@@ -164,22 +164,43 @@ export const CanvasProvider: React.FC<React.PropsWithChildren<{}>> = ({
   };
 
 useEffect(() => {
-    if (
-        canvasInstanceRef.current &&
-        selectedObject &&
-        selectedObject.type === "i-text"
-    ) {
-        // Aktualizacja właściwości zaznaczonego obiektu tekstowego na płótnie
-        const textObject = selectedObject as fabric.IText;
-        textObject.set({
-            fontFamily: selectedFont,
-            fontSize: fontSize,
-            fontWeight: fontWeight,
-            fill: textColor,
+    if (canvasInstanceRef.current) {
+        canvasInstanceRef.current.on("text:changed", (e) => {
+            const selectedObject = {
+                ...(e.target as fabric.IText),
+                id: "some-id",
+            } as ITextExtended;
+            if (selectedObject && selectedObject.type === "i-text") {
+                setSelectedObject(selectedObject);
+                updateTextOnServer(selectedObject);
+            }
         });
-        textObject.canvas?.renderAll(); // Wymuszenie aktualizacji obiektu na płótnie
+
+        canvasInstanceRef.current.on("selection:cleared", () => {
+            setSelectedObject(null);
+        });
+
+        canvasInstanceRef.current.on("selection:created", (e) => {
+            const selectedObject = e.target;
+            if (
+                selectedObject &&
+                (selectedObject.type === "i-text" || selectedObject.type === "image")
+            ) {
+                setSelectedObject(selectedObject);
+            }
+        });
+
+        canvasInstanceRef.current.on("selection:updated", (e) => {
+            const selectedObject = e.target;
+            if (
+                selectedObject &&
+                (selectedObject.type === "i-text" || selectedObject.type === "image")
+            ) {
+                setSelectedObject(selectedObject);
+            }
+        });
     }
-}, [selectedFont, fontSize, fontWeight, textColor, selectedObject]);
+}, []); // Usunięto selectedObject z tablicy zależności
 
   return (
     <CanvasContext.Provider
