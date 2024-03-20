@@ -74,20 +74,20 @@ interface CanvasContextProps {
   //Realtime editing
   useEffect(() => {
     if (canvasInstanceRef.current) {
-        canvasInstanceRef.current.on("selection:created", (e) => {
-        const selectedObject = { ...(e.target as fabric.IText), id: 'some-id' } as ITextExtended;
-        if (selectedObject && selectedObject.type === "i-text") {
+        canvasInstanceRef.current.on("text:changed", (e) => {
+          const selectedObject = { ...(e.target as fabric.IText), id: 'some-id' } as ITextExtended;
+          if (selectedObject && selectedObject.type === "i-text") {
             setSelectedObject(selectedObject);
             updateTextOnServer(selectedObject);
-        }
+          }
         });
 
-        canvasInstanceRef.current.on("selection:updated", (e) => {
-        const selectedObject = { ...(e.target as fabric.IText), id: 'some-id' } as ITextExtended;
-        if (selectedObject && selectedObject.type === "i-text") {
-            setSelectedObject(selectedObject);
-            updateTextOnServer(selectedObject);
-        }
+        canvasInstanceRef.current.on("text:changed", (e) => {
+            const selectedObject = { ...(e.target as fabric.IText), id: 'some-id' } as ITextExtended;
+            if (selectedObject && selectedObject.type === "i-text") {
+                setSelectedObject(selectedObject);
+                updateTextOnServer(selectedObject);
+            }
         });
   
         canvasInstanceRef.current.on("selection:cleared", () => {
