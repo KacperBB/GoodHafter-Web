@@ -1,19 +1,10 @@
+// FontSelector.tsx
 import { useCanvas } from '@/context/CanvasContext';
 import React from 'react';
 
 const FontSelector = () => {
-    const canvasContext = useCanvas();
+    const { selectedFont, setSelectedFont, handleFontChange } = useCanvas();
 
-    if (!canvasContext) {
-        console.error('FontSelector musi być używany wewnątrz CanvasProvider');
-        return null; // lub inna obsługa błędu
-    }
-
-    const { selectedFont, setSelectedFont } = canvasContext;
-
-    const handleFontChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        setSelectedFont && setSelectedFont(e.target.value);
-    };
 
     return (
         <label>

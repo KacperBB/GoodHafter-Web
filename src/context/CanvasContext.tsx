@@ -22,6 +22,10 @@ interface CanvasContextProps {
   addImage: (url: string) => void;
   downloadCanvas: () => void;
   deleteSelected: () => void;
+  handleFontSizeChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleFontChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  handleFontWeightChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  handleColorChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   resetCanvas: () => void;
   canvas: fabric.Canvas | null;
   setCanvasInstanceRef: (canvas: fabric.Canvas | null) => void; // Dodaj tę linię
@@ -48,27 +52,86 @@ export const CanvasProvider: React.FC<{ children?: React.ReactNode }> = ({
 
   const addText = () => {
     const text = new fabric.IText("Twój tekst", {
-      left: 50,
-      top: 50,
-      fontSize,
-      fontFamily: selectedFont,
-      fontWeight,
-      fill: textColor,
-      selectable: true,
-      hasControls: true,
+        left: 50,
+        top: 50,
+        fontSize,
+        fontFamily: selectedFont,
+        fontWeight,
+        fill: textColor,
+        selectable: true,
+        hasControls: true,
     });
     text.on("mouse:down", () => {
-      console.log("Text clicked", text);
+        console.log("Text clicked", text);
     });
     if (canvasInstanceRef.current) {
-      canvasInstanceRef.current.add(text);
-      canvasInstanceRef.current.renderAll();
-      console.log("Text added", text);
-      console.log(
-        "Current objects on canvas",
-        canvasInstanceRef.current.getObjects()
-      );
+        canvasInstanceRef.current.add(text);
+        canvasInstanceRef.current.renderAll();
+        console.log("Text added", text);
+        console.log(
+            "Current objects on canvas",
+            canvasInstanceRef.current.getObjects()
+        );
+      
     }
+    setCanvasInstanceRef(canvasInstanceRef.current); // Aktualizuj canvasInstanceRef
+  };
+  const handleFontSizeChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+    const newFontSize = Number(e.target.value);
+    if (canvasInstanceRef.current) {
+        const activeObject = canvasInstanceRef.current.getActiveObject();
+        console.log("Czy obiekt jest nadal aktywny?", canvasInstanceRef.current.getActiveObject() === activeObject);
+
+        if (activeObject && activeObject.type === 'i-text') {
+            // Aplikuj zmianę rozmiaru czcionki
+            (activeObject as fabric.IText).set({ fontSize: newFontSize });
+            canvasInstanceRef.current.requestRenderAll();
+
+            console.log("Czy obiekt jest nadal aktywny?", canvasInstanceRef.current.getActiveObject() === activeObject);
+
+        }
+    }
+    setFontSize(newFontSize);
+};
+
+
+  const handleFontChange: React.ChangeEventHandler<HTMLSelectElement> = (e) => {
+    const newFont = e.target.value;
+    if (canvasInstanceRef.current) {
+      const activeObject = canvasInstanceRef.current.getActiveObject();
+      if (activeObject && activeObject.type === 'i-text') {
+        (activeObject as fabric.IText).set({ fontFamily: newFont });
+        canvasInstanceRef.current.requestRenderAll();
+        canvasInstanceRef.current.setActiveObject(activeObject);
+      }
+    }
+    setSelectedFont(newFont);
+  };
+
+  const handleFontWeightChange: React.ChangeEventHandler<HTMLSelectElement> = (e) => {
+    const newFontWeight = e.target.value;
+    if (canvasInstanceRef.current) {
+      const activeObject = canvasInstanceRef.current.getActiveObject();
+      if (activeObject && activeObject.type === 'i-text') {
+        (activeObject as fabric.IText).set({ fontWeight: newFontWeight });
+        canvasInstanceRef.current.requestRenderAll();
+        canvasInstanceRef.current.setActiveObject(activeObject);
+      }
+    }
+    setFontWeight(newFontWeight);
+  };
+
+  const handleColorChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+    const newColor = e.target.value;
+    if (canvasInstanceRef.current) {
+      const activeObject = canvasInstanceRef.current.getActiveObject();
+      if (activeObject && activeObject.type === 'i-text') {
+        (activeObject as fabric.IText).set({ fill: newColor });
+        canvasInstanceRef.current.requestRenderAll();
+        canvasInstanceRef.current.setActiveObject(activeObject);
+      }
+    }
+    setSelectedColor(newColor);
   };
 
   const addImage = (url: string) => {
@@ -124,6 +187,7 @@ export const CanvasProvider: React.FC<{ children?: React.ReactNode }> = ({
       value={{
         selectedFont,
         setSelectedFont,
+        handleFontWeightChange,
         fontSize,
         setFontSize,
         fontWeight,
@@ -131,12 +195,15 @@ export const CanvasProvider: React.FC<{ children?: React.ReactNode }> = ({
         textColor,
         setTextColor,
         addText,
-        setCanvasInstanceRef, // Zmień setCanvas na setCanvasInstanceRef
+        setCanvasInstanceRef,
+        handleColorChange,
+        handleFontChange,
         addImage,
         downloadCanvas,
         deleteSelected,
         canvasInstanceRef: canvasInstanceRef.current,
         resetCanvas,
+        handleFontSizeChange,
         canvas: canvasInstanceRef.current,
       }}
     >
@@ -154,3 +221,7 @@ export const useCanvas = () => {
 };
 
 export default CanvasProvider;
+function setSelectedColor(newColor: string) {
+  
+}
+
