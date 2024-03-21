@@ -1,11 +1,11 @@
-"use client";
+'use client'
+
 // CanvasContext.tsx
 import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { fabric } from "fabric";
-
-interface ITextExtended extends fabric.IText {
-  id: string;
-}
+import { updateTextOnCanvas, updateTextOnServer } from './TextUpdateLogic';
+import { ITextExtended } from './CanvasTypes';
+import Cookies from 'js-cookie';
 
 interface CanvasContextProps {
   canvas: fabric.Canvas | null;
@@ -41,27 +41,6 @@ export const CanvasProvider: React.FC<React.PropsWithChildren<{}>> = ({
   const [fontWeight, setFontWeight] = useState("normal");
   const [textColor, setTextColor] = useState("#ffffff");
 
-  const updateTextOnServer = async (selectedObject: ITextExtended) => {
-    const response = await fetch("/api/update-text", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        id: selectedObject.id,
-        text: selectedObject.text,
-        fontSize: selectedObject.fontSize,
-        fontFamily: selectedObject.fontFamily,
-        fontWeight: selectedObject.fontWeight,
-        fill: selectedObject.fill,
-      }),
-    });
-
-    if (!response.ok) {
-      console.error("Failed to update text on server");
-    }
-  };
-
   useEffect(() => {
     if (canvasRef.current && !canvasInstanceRef.current) {
       const initCanvas = new fabric.Canvas(canvasRef.current, {
@@ -73,6 +52,48 @@ export const CanvasProvider: React.FC<React.PropsWithChildren<{}>> = ({
     }
   }, []);
 
+  const saveCanvasStateToCookies = () => {
+    if (canvasInstanceRef.current) {
+      const objects = canvasInstanceRef.current.getObjects();
+      const serializedObjects = objects.map(object => {
+        const textObject = object as fabric.IText;  // Dodajemy to rzutowanie
+        return {
+          type: textObject.type,
+          left: textObject.left,
+          top: textObject.top,
+          fill: textObject.fill,
+          fontFamily: textObject.fontFamily,
+          fontWeight: textObject.fontWeight,
+          fontSize: textObject.fontSize,
+          text: textObject.text,
+        };
+      });
+      Cookies.set('canvasObjects', JSON.stringify(serializedObjects));
+    }
+  };
+const restoreCanvasStateFromCookies = () => {
+  if (canvasInstanceRef.current) {
+    const serializedObjects = Cookies.get('canvasObjects');
+    if (serializedObjects) {
+      const objects = JSON.parse(serializedObjects);
+      objects.forEach((object: any) => {
+        if (object.type === 'i-text') {
+          const text = new fabric.IText(object.text, {
+            left: object.left,
+            top: object.top,
+            fill: object.fill,
+            fontFamily: object.fontFamily,
+            fontWeight: object.fontWeight,
+            fontSize: object.fontSize,
+          });
+          canvasInstanceRef?.current?.add(text);
+        }
+        // Handle other object types...
+      });
+      canvasInstanceRef.current.renderAll();
+    }
+  }
+};
   //Realtime editing
   useEffect(() => {
     if (canvasInstanceRef.current) {
@@ -84,6 +105,7 @@ export const CanvasProvider: React.FC<React.PropsWithChildren<{}>> = ({
         if (selectedObject && selectedObject.type === "i-text") {
           setSelectedObject(selectedObject);
           updateTextOnServer(selectedObject);
+          saveCanvasStateToCookies();  // Dodajemy to wywołanie
         }
       });
 
@@ -113,6 +135,7 @@ export const CanvasProvider: React.FC<React.PropsWithChildren<{}>> = ({
     }
   }, [selectedObject]);
 
+  
   const addText = () => {
     const text = new fabric.IText("Twój tekst", {
       left: 50,
@@ -124,14 +147,16 @@ export const CanvasProvider: React.FC<React.PropsWithChildren<{}>> = ({
       selectable: true,
       hasControls: true,
     });
-
+  
     text.on("mouse:dblclick", () => {
       text.enterEditing();
     });
-
-    canvasInstanceRef.current?.add(text);
-    canvasInstanceRef.current?.setActiveObject(text);
-    canvasInstanceRef.current?.requestRenderAll();
+  
+    if (canvasInstanceRef.current) {  // Dodajemy tę kontrolę
+      canvasInstanceRef.current.add(text);
+      canvasInstanceRef.current.setActiveObject(text);
+      canvasInstanceRef.current.requestRenderAll();
+    }
   };
 
   const addImage = (url: string) => {
@@ -162,23 +187,33 @@ export const CanvasProvider: React.FC<React.PropsWithChildren<{}>> = ({
       canvasInstanceRef.current.clear();
     }
   };
+useEffect(() => {
+  if (canvasRef.current && !canvasInstanceRef.current) {
+    const initCanvas = new fabric.Canvas(canvasRef.current, {
+      height: 400,
+      width: 600,
+      selection: true,
+    });
+    canvasInstanceRef.current = initCanvas;
+    restoreCanvasStateFromCookies();  // Dodajemy to wywołanie
+  }
+}, []);
 
 useEffect(() => {
-    if (
-        canvasInstanceRef.current &&
-        selectedObject &&
-        selectedObject.type === "i-text"
-    ) {
-        // Aktualizacja właściwości zaznaczonego obiektu tekstowego na płótnie
-        const textObject = selectedObject as fabric.IText;
-        textObject.set({
-            fontFamily: selectedFont,
-            fontSize: fontSize,
-            fontWeight: fontWeight,
-            fill: textColor,
-        });
-        textObject.canvas?.renderAll(); // Wymuszenie aktualizacji obiektu na płótnie
+  if (selectedObject && selectedObject.type === 'i-text') {
+    const textObject = selectedObject as fabric.IText;
+    if (canvasInstanceRef.current) {
+      // Znajdź obiekt na płótnie
+      const objectOnCanvas = canvasInstanceRef.current.getObjects().find(obj => obj === textObject);
+      if (objectOnCanvas) {
+        // Zaktualizuj obiekt na płótnie
+        const textObjectOnCanvas = objectOnCanvas as fabric.IText;
+        textObjectOnCanvas.set({ fontFamily: selectedFont, fontSize, fontWeight, fill: textColor });
+        canvasInstanceRef.current.renderAll();
+      }
+      updateTextOnServer(textObject as ITextExtended);
     }
+  }
 }, [selectedFont, fontSize, fontWeight, textColor, selectedObject]);
 
   return (
