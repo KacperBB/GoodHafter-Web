@@ -1,12 +1,20 @@
-"use client";
-// FontWeightSelector.tsx
-import useCanvas from "@/context/CanvasContext";
+import { useCanvas } from '@/context/CanvasContext';
+import React from 'react';
 
 const FontWeightSelector = () => {
-    const { fontWeight, setFontWeight } = useCanvas();
+    const canvasContext = useCanvas();
+
+    if (!canvasContext) {
+        console.error('FontWeightSelector musi być używany wewnątrz CanvasProvider');
+        return null; // lub inna obsługa błędu
+    }
+
+    const { fontWeight, setFontWeight } = canvasContext;
+
     const handleFontWeightChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setFontWeight && setFontWeight(e.target.value);
     };
+
     return (
         <label>
             Grubość czcionki:

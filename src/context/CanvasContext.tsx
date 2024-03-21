@@ -1,14 +1,15 @@
-'use client'
+"use client";
 
 // CanvasContext.tsx
-import { createContext, useContext, useEffect, useState, useRef } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useRef,
+} from "react";
 import { fabric } from "fabric";
-import { updateTextOnCanvas, updateTextOnServer } from './TextUpdateLogic';
-import { ITextExtended } from './CanvasTypes';
-import Cookies from 'js-cookie';
 
 interface CanvasContextProps {
-  canvas: fabric.Canvas | null;
   selectedFont: string;
   setSelectedFont: React.Dispatch<React.SetStateAction<string>>;
   fontSize: number;
@@ -22,163 +23,74 @@ interface CanvasContextProps {
   downloadCanvas: () => void;
   deleteSelected: () => void;
   resetCanvas: () => void;
+  canvas: fabric.Canvas | null;
+  setCanvasInstanceRef: (canvas: fabric.Canvas | null) => void; // Dodaj tę linię
+  canvasInstanceRef?: fabric.Canvas | null; // Dodaj tę linię
 }
 
 export const CanvasContext = createContext<CanvasContextProps | undefined>(
   undefined
 );
 
-export const CanvasProvider: React.FC<React.PropsWithChildren<{}>> = ({
+export const CanvasProvider: React.FC<{ children?: React.ReactNode }> = ({
   children,
 }) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const canvasInstanceRef = useRef<fabric.Canvas | null>(null);
-  const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(
-    null
-  );
   const [selectedFont, setSelectedFont] = useState("Arial");
   const [fontSize, setFontSize] = useState(20);
   const [fontWeight, setFontWeight] = useState("normal");
   const [textColor, setTextColor] = useState("#ffffff");
 
-  useEffect(() => {
-    if (canvasRef.current && !canvasInstanceRef.current) {
-      const initCanvas = new fabric.Canvas(canvasRef.current, {
-        height: 400,
-        width: 600,
-        selection: true,
-      });
-      canvasInstanceRef.current = initCanvas;
-    }
-  }, []);
-
-  const saveCanvasStateToCookies = () => {
-    if (canvasInstanceRef.current) {
-      const objects = canvasInstanceRef.current.getObjects();
-      const serializedObjects = objects.map(object => {
-        const textObject = object as fabric.IText;  // Dodajemy to rzutowanie
-        return {
-          type: textObject.type,
-          left: textObject.left,
-          top: textObject.top,
-          fill: textObject.fill,
-          fontFamily: textObject.fontFamily,
-          fontWeight: textObject.fontWeight,
-          fontSize: textObject.fontSize,
-          text: textObject.text,
-        };
-      });
-      Cookies.set('canvasObjects', JSON.stringify(serializedObjects));
-    }
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasInstanceRef = useRef<fabric.Canvas | null>(null);
+  const setCanvasInstanceRef = (canvas: fabric.Canvas | null) => {
+    canvasInstanceRef.current = canvas;
   };
-const restoreCanvasStateFromCookies = () => {
-  if (canvasInstanceRef.current) {
-    const serializedObjects = Cookies.get('canvasObjects');
-    if (serializedObjects) {
-      const objects = JSON.parse(serializedObjects);
-      objects.forEach((object: any) => {
-        if (object.type === 'i-text') {
-          const text = new fabric.IText(object.text, {
-            left: object.left,
-            top: object.top,
-            fill: object.fill,
-            fontFamily: object.fontFamily,
-            fontWeight: object.fontWeight,
-            fontSize: object.fontSize,
-          });
-          canvasInstanceRef?.current?.add(text);
-        }
-        // Handle other object types...
-      });
-      canvasInstanceRef.current.renderAll();
-    }
-  }
-};
-  //Realtime editing
-  useEffect(() => {
-    if (canvasInstanceRef.current) {
-      canvasInstanceRef.current.on("text:changed", (e) => {
-        const selectedObject = {
-          ...(e.target as fabric.IText),
-          id: "some-id",
-        } as ITextExtended;
-        if (selectedObject && selectedObject.type === "i-text") {
-          setSelectedObject(selectedObject);
-          updateTextOnServer(selectedObject);
-          saveCanvasStateToCookies();  // Dodajemy to wywołanie
-        }
-      });
 
-      canvasInstanceRef.current.on("selection:cleared", () => {
-        setSelectedObject(null);
-      });
-
-      canvasInstanceRef.current.on("selection:created", (e) => {
-        const selectedObject = e.target;
-        if (
-          selectedObject &&
-          (selectedObject.type === "i-text" || selectedObject.type === "image")
-        ) {
-          setSelectedObject(selectedObject);
-        }
-      });
-
-      canvasInstanceRef.current.on("selection:updated", (e) => {
-        const selectedObject = e.target;
-        if (
-          selectedObject &&
-          (selectedObject.type === "i-text" || selectedObject.type === "image")
-        ) {
-          setSelectedObject(selectedObject);
-        }
-      });
-    }
-  }, [selectedObject]);
-
-  
   const addText = () => {
     const text = new fabric.IText("Twój tekst", {
       left: 50,
       top: 50,
-      fontSize: fontSize,
+      fontSize,
       fontFamily: selectedFont,
-      fontWeight: fontWeight,
+      fontWeight,
       fill: textColor,
       selectable: true,
       hasControls: true,
     });
-  
-    text.on("mouse:dblclick", () => {
-      text.enterEditing();
+    text.on("mouse:down", () => {
+      console.log("Text clicked", text);
     });
-  
-    if (canvasInstanceRef.current) {  // Dodajemy tę kontrolę
+    if (canvasInstanceRef.current) {
       canvasInstanceRef.current.add(text);
-      canvasInstanceRef.current.setActiveObject(text);
-      canvasInstanceRef.current.requestRenderAll();
+      canvasInstanceRef.current.renderAll();
+      console.log("Text added", text);
+      console.log(
+        "Current objects on canvas",
+        canvasInstanceRef.current.getObjects()
+      );
     }
   };
 
   const addImage = (url: string) => {
-    fabric.Image.fromURL(url, function (img) {
-      if (canvasInstanceRef.current && img) {
+    if (canvasInstanceRef.current) {
+      fabric.Image.fromURL(url, (img) => {
         img.set({
           left: 50,
           top: 50,
           selectable: true,
           hasControls: true,
         });
-        canvasInstanceRef.current.add(img);
-        canvasInstanceRef.current.setActiveObject(img);
-        canvasInstanceRef.current.requestRenderAll();
-      }
-    });
+        canvasInstanceRef.current?.add(img);
+      });
+    }
   };
 
   const deleteSelected = () => {
     if (canvasInstanceRef.current) {
       const activeObjects = canvasInstanceRef.current.getActiveObjects();
-      canvasInstanceRef.current.remove(...activeObjects);
+      if (activeObjects) {
+        activeObjects.forEach((obj) => canvasInstanceRef.current?.remove(obj));
+      }
     }
   };
 
@@ -187,39 +99,29 @@ const restoreCanvasStateFromCookies = () => {
       canvasInstanceRef.current.clear();
     }
   };
-useEffect(() => {
-  if (canvasRef.current && !canvasInstanceRef.current) {
-    const initCanvas = new fabric.Canvas(canvasRef.current, {
-      height: 400,
-      width: 600,
-      selection: true,
-    });
-    canvasInstanceRef.current = initCanvas;
-    restoreCanvasStateFromCookies();  // Dodajemy to wywołanie
-  }
-}, []);
 
-useEffect(() => {
-  if (selectedObject && selectedObject.type === 'i-text') {
-    const textObject = selectedObject as fabric.IText;
+  const downloadCanvas = () => {
     if (canvasInstanceRef.current) {
-      // Znajdź obiekt na płótnie
-      const objectOnCanvas = canvasInstanceRef.current.getObjects().find(obj => obj === textObject);
-      if (objectOnCanvas) {
-        // Zaktualizuj obiekt na płótnie
-        const textObjectOnCanvas = objectOnCanvas as fabric.IText;
-        textObjectOnCanvas.set({ fontFamily: selectedFont, fontSize, fontWeight, fill: textColor });
-        canvasInstanceRef.current.renderAll();
-      }
-      updateTextOnServer(textObject as ITextExtended);
+      const canvasEl = (canvasInstanceRef.current as any)
+        .lowerCanvasEl as HTMLCanvasElement;
+      canvasEl.toBlob((blob: Blob | null) => {
+        if (blob !== null) {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = "canvas-image.png";
+          link.click();
+          setTimeout(() => {
+            URL.revokeObjectURL(url);
+          }, 100);
+        }
+      }, "image/png");
     }
-  }
-}, [selectedFont, fontSize, fontWeight, textColor, selectedObject]);
+  };
 
   return (
     <CanvasContext.Provider
       value={{
-        canvas: canvasInstanceRef.current,
         selectedFont,
         setSelectedFont,
         fontSize,
@@ -229,13 +131,15 @@ useEffect(() => {
         textColor,
         setTextColor,
         addText,
-        deleteSelected,
-        resetCanvas,
+        setCanvasInstanceRef, // Zmień setCanvas na setCanvasInstanceRef
         addImage,
-        downloadCanvas: () => {},
+        downloadCanvas,
+        deleteSelected,
+        canvasInstanceRef: canvasInstanceRef.current,
+        resetCanvas,
+        canvas: canvasInstanceRef.current,
       }}
     >
-      <canvas ref={canvasRef} />
       {children}
     </CanvasContext.Provider>
   );
@@ -249,4 +153,4 @@ export const useCanvas = () => {
   return context;
 };
 
-export default useCanvas;
+export default CanvasProvider;
