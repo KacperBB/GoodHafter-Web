@@ -12,6 +12,8 @@ const CanvasComponent = () => {
     useEffect(() => {
         if (canvasRef.current && !canvasInstanceRef) {
             const fabricCanvas = new fabric.Canvas(canvasRef.current);
+            fabricCanvas.setWidth(1000);
+            fabricCanvas.setHeight(500);
             setCanvasInstanceRef(fabricCanvas);
             console.log("Fabric canvas initialized", fabricCanvas);
 
