@@ -2,6 +2,7 @@ import CanvasEditor from "@/components/CanvasEditor";
 import { CanvasProvider } from "@/context/CanvasContext";
 import Image from "next/image";
 import dynamic from "next/dynamic";
+import Navigator from "@/components/navigator/Navigator";
 
 const CanvasComponentWithNoSSR = dynamic(
   () => import("../context/CanvasComponent"),
@@ -16,6 +17,7 @@ export default function Home() {
       <CanvasProvider>
         <CanvasComponentWithNoSSR />
         <CanvasEditor />
+        <Navigator />
       </CanvasProvider>
     </div>
   );

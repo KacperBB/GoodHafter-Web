@@ -6,6 +6,7 @@ import {
   useContext,
   useState,
   useRef,
+  useEffect,
 } from "react";
 import { fabric } from "fabric";
 
@@ -27,9 +28,11 @@ interface CanvasContextProps {
   handleFontWeightChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   handleColorChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   resetCanvas: () => void;
-  canvas: fabric.Canvas | null;
-  setCanvasInstanceRef: (canvas: fabric.Canvas | null) => void; // Dodaj tę linię
+  canvas: fabric.Canvas | null; 
+  setCanvasInstanceRef: (canvas: fabric.Canvas | null) => void;
   canvasInstanceRef?: fabric.Canvas | null; // Dodaj tę linię
+  objects: fabric.Object[];
+  moveObject: (direction: 'up' | 'down') => void;
 }
 
 export const CanvasContext = createContext<CanvasContextProps | undefined>(
@@ -43,6 +46,7 @@ export const CanvasProvider: React.FC<{ children?: React.ReactNode }> = ({
   const [fontSize, setFontSize] = useState(20);
   const [fontWeight, setFontWeight] = useState("normal");
   const [textColor, setTextColor] = useState("#ffffff");
+  const [objects, setObjects] = useState<fabric.Object[]>([]);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const canvasInstanceRef = useRef<fabric.Canvas | null>(null);
@@ -66,6 +70,7 @@ export const CanvasProvider: React.FC<{ children?: React.ReactNode }> = ({
     });
     if (canvasInstanceRef.current) {
         canvasInstanceRef.current.add(text);
+        setObjects(canvasInstanceRef.current.getObjects());
         canvasInstanceRef.current.renderAll();
         console.log("Text added", text);
         console.log(
@@ -144,9 +149,13 @@ export const CanvasProvider: React.FC<{ children?: React.ReactNode }> = ({
           hasControls: true,
         });
         canvasInstanceRef.current?.add(img);
+        if (canvasInstanceRef.current) {
+          canvasInstanceRef.current.add(img);
+          setObjects(canvasInstanceRef.current.getObjects()); // Aktualizuj stan objects
+        }
       });
     }
-  };
+};
 
   const deleteSelected = () => {
     if (canvasInstanceRef.current) {
@@ -160,6 +169,8 @@ export const CanvasProvider: React.FC<{ children?: React.ReactNode }> = ({
   const resetCanvas = () => {
     if (canvasInstanceRef.current) {
       canvasInstanceRef.current.clear();
+      setObjects([]); // Resetuj stan obiektów
+      localStorage.removeItem('objects'); // Usuń obiekty z localStorage
     }
   };
 
@@ -181,6 +192,69 @@ export const CanvasProvider: React.FC<{ children?: React.ReactNode }> = ({
       }, "image/png");
     }
   };
+
+
+const moveObject = (direction: 'up' | 'down') => {
+    const activeObject = canvasInstanceRef.current?.getActiveObject();
+    if (activeObject) {
+        if (direction === 'up') {
+            activeObject.bringForward();
+        } else {
+            activeObject.sendBackwards();
+        }
+        canvasInstanceRef.current?.requestRenderAll();
+    }
+};
+// Zapisz obiekty do localStorage za każdym razem, gdy są aktualizowane
+useEffect(() => {
+  if (canvasInstanceRef.current) {
+    const objectsToSave = canvasInstanceRef.current.getObjects().map(o => o.toObject());
+    localStorage.setItem('objects', JSON.stringify(objectsToSave));
+  }
+}, [objects]);
+
+// Zapisz obiekty do localStorage za każdym razem, gdy są aktualizowane
+useEffect(() => {
+  if (canvasInstanceRef.current) {
+    const objectsToSave = canvasInstanceRef.current.getObjects().map(o => ({
+      type: o.type,
+      left: o.left,
+      top: o.top,
+      width: o.width,
+      height: o.height,
+      fill: o.fill,
+      // Dodaj tutaj inne właściwości, które chcesz zachować
+    }));
+    localStorage.setItem('objects', JSON.stringify(objectsToSave));
+  }
+}, [objects]);
+
+// Odczytaj obiekty z localStorage, gdy komponent jest montowany
+useEffect(() => {
+  const savedObjects = localStorage.getItem('objects');
+  if (savedObjects) {
+    const objectsToLoad = JSON.parse(savedObjects);
+    const enlivenedObjects = objectsToLoad.map((obj: any) => {
+      switch (obj.type) {
+        case 'rect':
+          return new fabric.Rect(obj);
+        case 'circle':
+          return new fabric.Circle(obj);
+        case 'triangle':
+          return new fabric.Triangle(obj);
+        case 'i-text':
+          return new fabric.IText('Twój tekst', obj);
+        // Dodaj tutaj inne typy obiektów, które chcesz obsłużyć
+        default:
+          return null;
+      }
+    }).filter((obj: fabric.Object | null) => obj !== null);
+    setObjects(enlivenedObjects);
+    if (canvasInstanceRef.current) {
+      enlivenedObjects.forEach((obj: fabric.Object) => canvasInstanceRef.current?.add(obj));
+    }
+  }
+}, []);
 
   return (
     <CanvasContext.Provider
@@ -204,6 +278,8 @@ export const CanvasProvider: React.FC<{ children?: React.ReactNode }> = ({
         canvasInstanceRef: canvasInstanceRef.current,
         resetCanvas,
         handleFontSizeChange,
+        moveObject,
+        objects,
         canvas: canvasInstanceRef.current,
       }}
     >
