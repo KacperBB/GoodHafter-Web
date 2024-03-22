@@ -18,8 +18,8 @@ const Navigator: React.FC = () => {
                 object && (
                     <div key={index} style={{ color: colors[index % colors.length] }}>
                         <span>{object.name}</span> {/* Wyświetlamy nazwę obiektu zamiast jego typu */}
-                        <button onClick={() => moveObject('up', objects.length - 1 - index)}>W górę</button>
-                        <button onClick={() => moveObject('down', objects.length - 1 - index)}>W dół</button>
+                        <button onClick={() => moveObject('up', index + 1)}>W dół</button>
+                        <button onClick={() => moveObject('down', index - 1)}>W górę</button>
                     </div>
                 )
             ))}

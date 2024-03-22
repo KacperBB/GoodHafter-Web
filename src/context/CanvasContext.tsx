@@ -33,6 +33,7 @@ interface CanvasContextProps {
   setCanvasInstanceRef: (canvas: fabric.Canvas | null) => void;
   canvasInstanceRef?: fabric.Canvas | null; // Dodaj tę linię
   objects: fabric.Object[];
+  setObjects: React.Dispatch<React.SetStateAction<fabric.Object[]>>;
     moveObject: (direction: 'up' | 'down', index: number) => void;
 }
 
@@ -143,32 +144,33 @@ const [isLoading, setIsLoading] = useState(true);
     }
     setSelectedColor(newColor);
   };
-  const addImage = (url: string) => {
-    if (canvasInstanceRef.current) {
-      fabric.Image.fromURL(url, (img) => {
-        img.set({
-          left: 50,
-          top: 50,
-          selectable: true,
-          hasControls: true,
-          name: url,
-        });
-        img.toObject = ((toObject) => {
-          return function(this: fabric.Image) {
-            return fabric.util.object.extend(toObject.call(this), {
-              name: this.name
-            });
-          };
-        })(img.toObject);
-        const existingObject = canvasInstanceRef.current?.getObjects().find(o => o.toObject() === img.toObject());
-        if (!existingObject) {
-          // Jeśli obiekt nie istnieje, dodaj go do płótna
-          canvasInstanceRef.current?.add(img);
-          setObjects(canvasInstanceRef.current?.getObjects() || []); // Aktualizuj stan objects
-        }
+const addImage = (url: string) => {
+  if (canvasInstanceRef.current) {
+    fabric.Image.fromURL(url, (img) => {
+      const imageName = url.startsWith('data:image') ? `Image_${Date.now()}` : url;
+      img.set({
+        left: 50,
+        top: 50,
+        selectable: true,
+        hasControls: true,
+        name: imageName,
       });
-    }
-  };
+      img.toObject = ((toObject) => {
+        return function(this: fabric.Image) {
+          return fabric.util.object.extend(toObject.call(this), {
+            name: this.name
+          });
+        };
+      })(img.toObject);
+      const existingObject = canvasInstanceRef.current?.getObjects().find(o => o.toObject() === img.toObject());
+      if (!existingObject) {
+        // Jeśli obiekt nie istnieje, dodaj go do płótna
+        canvasInstanceRef.current?.add(img);
+        setObjects(canvasInstanceRef.current?.getObjects() || []); // Aktualizuj stan objects
+      }
+    });
+  }
+};
 
   const deleteSelected = () => {
     if (canvasInstanceRef.current) {
@@ -303,6 +305,7 @@ useEffect(() => {
         addImage,
         downloadCanvas,
         deleteSelected,
+        setObjects,
         canvasInstanceRef: canvasInstanceRef.current,
         resetCanvas,
         handleFontSizeChange,

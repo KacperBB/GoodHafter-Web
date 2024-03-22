@@ -6,7 +6,7 @@ import { fabric } from 'fabric';
 import { useCanvas } from './CanvasContext';
 
 const CanvasComponent = () => {
-    const { canvasInstanceRef, setCanvasInstanceRef } = useCanvas();
+    const { canvasInstanceRef, setCanvasInstanceRef, setObjects } = useCanvas();
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
     useEffect(() => {
@@ -28,6 +28,7 @@ const CanvasComponent = () => {
             if (savedCanvasState) {
                 fabricCanvas.loadFromJSON(savedCanvasState, () => {
                     fabricCanvas.renderAll();
+                    setObjects(fabricCanvas.getObjects()); // Aktualizujemy stan objects po załadowaniu stanu płótna
                 });
             }
         }
@@ -35,7 +36,7 @@ const CanvasComponent = () => {
         // Zapisz stan obiektów na płótnie przed unmount
         return () => {
             if (canvasInstanceRef) {
-                const canvasState = canvasInstanceRef.toJSON();
+                const canvasState = canvasInstanceRef.toJSON(['name']); // Dodajemy 'name' do listy właściwości do serializacji
                 localStorage.setItem('canvasState', JSON.stringify(canvasState));
             }
         };
