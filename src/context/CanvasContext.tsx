@@ -27,12 +27,13 @@ interface CanvasContextProps {
   handleFontChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   handleFontWeightChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   handleColorChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  isLoading: boolean;
   resetCanvas: () => void;
   canvas: fabric.Canvas | null; 
   setCanvasInstanceRef: (canvas: fabric.Canvas | null) => void;
   canvasInstanceRef?: fabric.Canvas | null; // Dodaj tę linię
   objects: fabric.Object[];
-  moveObject: (direction: 'up' | 'down') => void;
+    moveObject: (direction: 'up' | 'down', index: number) => void;
 }
 
 export const CanvasContext = createContext<CanvasContextProps | undefined>(
@@ -47,43 +48,47 @@ export const CanvasProvider: React.FC<{ children?: React.ReactNode }> = ({
   const [fontWeight, setFontWeight] = useState("normal");
   const [textColor, setTextColor] = useState("#ffffff");
   const [objects, setObjects] = useState<fabric.Object[]>([]);
+const [isLoading, setIsLoading] = useState(true);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const canvasInstanceRef = useRef<fabric.Canvas | null>(null);
   const setCanvasInstanceRef = (canvas: fabric.Canvas | null) => {
     canvasInstanceRef.current = canvas;
   };
-
   const addText = () => {
     const text = new fabric.IText("Twój tekst", {
-        left: 50,
-        top: 50,
-        fontSize,
-        fontFamily: selectedFont,
-        fontWeight,
-        fill: textColor,
-        selectable: true,
-        hasControls: true,
+      left: 50,
+      top: 50,
+      fontSize: fontSize || 20,
+      fontFamily: selectedFont || "Arial",
+      fontWeight: fontWeight || "normal",
+      fill: textColor || "#000000",
+      selectable: true,
+      hasControls: true,
+      name: "Twój tekst",
     });
-    text.on("mouse:down", () => {
-        console.log("Text clicked", text);
+    text.toObject = ((toObject) => {
+      return function(this: fabric.IText) {
+        return fabric.util.object.extend(toObject.call(this), {
+          name: this.name
+        });
+      };
+    })(text.toObject);
+    text.on('modified', function(this: fabric.IText) {
+      this.set({ name: this.text }); // Aktualizujemy nazwę obiektu na jego zawartość
+      setObjects(canvasInstanceRef.current?.getObjects() || []); // Aktualizujemy stan obiektów
     });
     if (canvasInstanceRef.current) {
-        canvasInstanceRef.current.add(text);
-        setObjects(canvasInstanceRef.current.getObjects());
-        canvasInstanceRef.current.renderAll();
-        console.log("Text added", text);
-        console.log(
-            "Current objects on canvas",
-            canvasInstanceRef.current.getObjects()
-        );
-      
+      canvasInstanceRef.current.add(text);
+      setObjects(prevObjects => [...prevObjects, text.toObject()]); // Aktualizuj stan objects
+      canvasInstanceRef.current.renderAll();
     }
     setCanvasInstanceRef(canvasInstanceRef.current); // Aktualizuj canvasInstanceRef
   };
+
   const handleFontSizeChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
     const newFontSize = Number(e.target.value);
-    if (canvasInstanceRef.current) {
+    if (canvasInstanceRef && canvasInstanceRef.current) {
         const activeObject = canvasInstanceRef.current.getActiveObject();
         console.log("Czy obiekt jest nadal aktywny?", canvasInstanceRef.current.getActiveObject() === activeObject);
 
@@ -138,7 +143,6 @@ export const CanvasProvider: React.FC<{ children?: React.ReactNode }> = ({
     }
     setSelectedColor(newColor);
   };
-
   const addImage = (url: string) => {
     if (canvasInstanceRef.current) {
       fabric.Image.fromURL(url, (img) => {
@@ -147,22 +151,30 @@ export const CanvasProvider: React.FC<{ children?: React.ReactNode }> = ({
           top: 50,
           selectable: true,
           hasControls: true,
+          name: url,
         });
-        canvasInstanceRef.current?.add(img);
-        if (canvasInstanceRef.current) {
-          canvasInstanceRef.current.add(img);
-          setObjects(canvasInstanceRef.current.getObjects()); // Aktualizuj stan objects
+        img.toObject = ((toObject) => {
+          return function(this: fabric.Image) {
+            return fabric.util.object.extend(toObject.call(this), {
+              name: this.name
+            });
+          };
+        })(img.toObject);
+        const existingObject = canvasInstanceRef.current?.getObjects().find(o => o.toObject() === img.toObject());
+        if (!existingObject) {
+          // Jeśli obiekt nie istnieje, dodaj go do płótna
+          canvasInstanceRef.current?.add(img);
+          setObjects(canvasInstanceRef.current?.getObjects() || []); // Aktualizuj stan objects
         }
       });
     }
-};
+  };
 
   const deleteSelected = () => {
     if (canvasInstanceRef.current) {
       const activeObjects = canvasInstanceRef.current.getActiveObjects();
-      if (activeObjects) {
-        activeObjects.forEach((obj) => canvasInstanceRef.current?.remove(obj));
-      }
+      activeObjects.forEach((obj) => canvasInstanceRef.current?.remove(obj));
+      setObjects(prevObjects => prevObjects.filter(obj => !activeObjects.includes(obj.toObject()))); // Aktualizuj stan objects
     }
   };
 
@@ -193,66 +205,81 @@ export const CanvasProvider: React.FC<{ children?: React.ReactNode }> = ({
     }
   };
 
+  const moveObject = (direction: 'up' | 'down', displayedIndex: number) => {
+    if (canvasInstanceRef && canvasInstanceRef.current) {
+      const actualIndex = objects.length - 1 - displayedIndex;
+      const object = canvasInstanceRef.current.item(actualIndex) as unknown as fabric.Object; // Pobieramy obiekt z płótna i rzutujemy go na fabric.Object
 
-const moveObject = (direction: 'up' | 'down') => {
-    const activeObject = canvasInstanceRef.current?.getActiveObject();
-    if (activeObject) {
-        if (direction === 'up') {
-            activeObject.bringForward();
-        } else {
-            activeObject.sendBackwards();
+      if (object) {
+        let newIndex = direction === 'up' ? actualIndex + 1 : actualIndex - 1;
+        // Zapewniamy, że nowy indeks jest w zakresie
+        newIndex = Math.max(0, Math.min(canvasInstanceRef.current.size() - 1, newIndex));
+
+        if (newIndex !== actualIndex) {
+          canvasInstanceRef.current.moveTo(object, newIndex);
+          canvasInstanceRef.current.renderAll();
+
+          // Aktualizujemy stan obiektów, aby odzwierciedlić zmianę
+          setObjects(canvasInstanceRef.current.getObjects());
         }
-        canvasInstanceRef.current?.requestRenderAll();
+      }
     }
-};
-// Zapisz obiekty do localStorage za każdym razem, gdy są aktualizowane
-useEffect(() => {
-  if (canvasInstanceRef.current) {
-    const objectsToSave = canvasInstanceRef.current.getObjects().map(o => o.toObject());
-    localStorage.setItem('objects', JSON.stringify(objectsToSave));
-  }
-}, [objects]);
+  };
 
-// Zapisz obiekty do localStorage za każdym razem, gdy są aktualizowane
 useEffect(() => {
   if (canvasInstanceRef.current) {
-    const objectsToSave = canvasInstanceRef.current.getObjects().map(o => ({
-      type: o.type,
-      left: o.left,
-      top: o.top,
-      width: o.width,
-      height: o.height,
-      fill: o.fill,
-      // Dodaj tutaj inne właściwości, które chcesz zachować
-    }));
-    localStorage.setItem('objects', JSON.stringify(objectsToSave));
+    const savedObjects = canvasInstanceRef.current.getObjects().map(obj => obj.toObject());
+    localStorage.setItem('objects', JSON.stringify(savedObjects));
   }
-}, [objects]);
+  setIsLoading(false); // Aktualizacja stanu isLoading
+}, [canvasInstanceRef, setIsLoading]);
 
 // Odczytaj obiekty z localStorage, gdy komponent jest montowany
 useEffect(() => {
   const savedObjects = localStorage.getItem('objects');
   if (savedObjects) {
     const objectsToLoad = JSON.parse(savedObjects);
-    const enlivenedObjects = objectsToLoad.map((obj: any) => {
+    const enlivenedObjects: fabric.Object[] = [];
+    let loadedImages = 0;
+    objectsToLoad.forEach((obj: any) => {
       switch (obj.type) {
         case 'rect':
-          return new fabric.Rect(obj);
+          enlivenedObjects.push(new fabric.Rect(obj));
+          break;
         case 'circle':
-          return new fabric.Circle(obj);
+          enlivenedObjects.push(new fabric.Circle(obj));
+          break;
         case 'triangle':
-          return new fabric.Triangle(obj);
+          enlivenedObjects.push(new fabric.Triangle(obj));
+          break;
         case 'i-text':
-          return new fabric.IText('Twój tekst', obj);
+          if (obj.text) { // Dodaj to sprawdzenie
+            enlivenedObjects.push(new fabric.IText(obj.text, obj));
+          }
+          break;
+        case 'image':
+          fabric.Image.fromURL(obj.src, (img) => {
+            img.set(obj);
+            enlivenedObjects.push(img);
+            loadedImages++;
+            if (loadedImages === objectsToLoad.filter((o: { type: string; }) => o.type === 'image').length) {
+              setObjects(enlivenedObjects);
+              if (canvasInstanceRef.current) {
+                if (canvasInstanceRef.current) {
+                enlivenedObjects.forEach((obj: fabric.Object) => {
+                  canvasInstanceRef.current?.add(obj);
+                });
+                setObjects(canvasInstanceRef.current.getObjects());
+                }
+              }
+            }
+          });
+          break;
         // Dodaj tutaj inne typy obiektów, które chcesz obsłużyć
         default:
           return null;
       }
-    }).filter((obj: fabric.Object | null) => obj !== null);
-    setObjects(enlivenedObjects);
-    if (canvasInstanceRef.current) {
-      enlivenedObjects.forEach((obj: fabric.Object) => canvasInstanceRef.current?.add(obj));
-    }
+    });
   }
 }, []);
 
@@ -260,6 +287,7 @@ useEffect(() => {
     <CanvasContext.Provider
       value={{
         selectedFont,
+        isLoading,
         setSelectedFont,
         handleFontWeightChange,
         fontSize,
