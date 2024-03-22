@@ -40,7 +40,7 @@ const CanvasComponent = () => {
                 localStorage.setItem('canvasState', JSON.stringify(canvasState));
             }
         };
-    }, [setCanvasInstanceRef, canvasInstanceRef]);
+    }, [setCanvasInstanceRef, canvasInstanceRef, setObjects]);
 
     return <canvas ref={canvasRef} id="canvas" />;
 };
