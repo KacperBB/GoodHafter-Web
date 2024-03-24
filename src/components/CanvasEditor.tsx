@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import AddTextButton from "./functionButtons/AddTextButton";
 import DeleteSelectedButton from "./functionButtons/DeleteSelectedButton";
@@ -15,21 +15,28 @@ const CanvasEditor = () => {
   const canvasContext = useCanvas();
 
   if (!canvasContext) {
-    console.error('CanvasEditor musi być używany wewnątrz CanvasProvider');
+    console.error("CanvasEditor musi być używany wewnątrz CanvasProvider");
     return null; // lub inna obsługa błędu
   }
 
   return (
-    <div>
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-row gap-2">
+        <AddImageButton />
         <AddTextButton />
+      </div>
+    <div className="flex flex-row gap-2">
+    <FontSelector />
+      <FontSizeInput />
+      <FontWeightSelector />
+    </div>
+
+      <TextColorInput />
+      <div className="flex flex-row gap-2">
         <DeleteSelectedButton />
         <ResetCanvasButton />
         <DownloadCanvasButton />
-        <FontSelector />
-        <FontSizeInput />
-        <FontWeightSelector />
-        <TextColorInput />
-        <AddImageButton />
+      </div>
     </div>
   );
 };

@@ -1,6 +1,8 @@
 // DeleteSelectedButton.tsx
 import { useCanvas } from '@/context/CanvasContext';
 import React from 'react';
+import { Button } from '../ui/button';
+import { Trash2 } from 'lucide-react';
 
 const DeleteSelectedButton = () => {
   const canvasContext = useCanvas();
@@ -12,7 +14,9 @@ const DeleteSelectedButton = () => {
 
   const { deleteSelected } = canvasContext;
 
-  return <button onClick={deleteSelected}>Usuń wybrany element</button>;
+  return <Button onClick={deleteSelected} variant='outline' className='w-fit h-auto aspect-square shadow-aesthetic p-2 text-muted-foreground'>
+    <Trash2 className='p-1'/>
+  </Button>;
 };
 
 export default DeleteSelectedButton;

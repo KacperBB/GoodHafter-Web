@@ -1,5 +1,7 @@
 import { useCanvas } from '@/context/CanvasContext';
 import React from 'react';
+import { Button } from '../ui/button';
+import { Download } from 'lucide-react';
 
 const DownloadCanvasButton = () => {
     const canvasContext = useCanvas();
@@ -11,7 +13,9 @@ const DownloadCanvasButton = () => {
 
     const { downloadCanvas } = canvasContext;
 
-    return <button onClick={downloadCanvas}>Pobierz obraz</button>;
+    return <Button onClick={downloadCanvas} variant='outline' className='w-fit h-auto aspect-square shadow-aesthetic p-2 text-muted-foreground'>
+        <Download className='p-1' />
+    </Button>;
 };
 
 export default DownloadCanvasButton;

@@ -1,6 +1,7 @@
 // AddTextButton.js
 import { useCanvas } from '@/context/CanvasContext';
 import React from 'react';
+import { Button } from '../ui/button';
 
 
 const AddTextButton = () => {
@@ -13,7 +14,7 @@ const AddTextButton = () => {
 
     const { addText } = canvasContext;
 
-    return <button onClick={addText}>Dodaj tekst</button>;
+    return <Button onClick={addText} variant='outline' className='text-muted-foreground max-w-[150px] shadow-aesthetic'>Add Text</Button>;
 };
 
 export default AddTextButton;

@@ -12,8 +12,6 @@ const CanvasComponent = () => {
     useEffect(() => {
         if (canvasRef.current && !canvasInstanceRef) {
             const fabricCanvas = new fabric.Canvas(canvasRef.current);
-            fabricCanvas.setWidth(1000);
-            fabricCanvas.setHeight(500);
             setCanvasInstanceRef(fabricCanvas);
             console.log("Fabric canvas initialized", fabricCanvas);
 
@@ -42,7 +40,32 @@ const CanvasComponent = () => {
         };
     }, [setCanvasInstanceRef, canvasInstanceRef, setObjects]);
 
-    return <canvas ref={canvasRef} id="canvas" />;
+    useEffect(() => {
+        const resizeCanvas = () => {
+            if (canvasRef.current && canvasInstanceRef) {
+                const parentElement = canvasRef.current.parentElement;
+                if (parentElement) {
+                    canvasInstanceRef.setWidth(parentElement.offsetWidth);
+                    canvasInstanceRef.setHeight(parentElement.offsetHeight);
+                    canvasInstanceRef.calcOffset();
+                    canvasInstanceRef.renderAll();
+                }
+            }
+        };
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        return () => {
+            window.removeEventListener('resize', resizeCanvas);
+        };
+    }, [canvasInstanceRef]);
+
+    return( 
+        <div className='border-[1px] w-full h-full border-gray rounded-md shadow-[rgba(0,_0,_0,_0.24)_0px_3px_8px]'>
+            <canvas ref={canvasRef} id="canvas" />
+        </div>
+    );
 };
 
 export default CanvasComponent;
