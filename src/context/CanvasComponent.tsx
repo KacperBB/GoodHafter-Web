@@ -42,6 +42,7 @@ const CanvasComponent = () => {
                 strokeDashArray: [5, 5],
                 originX: "left",
                 originY: "top",
+                excludeFromNavigator: true,
               });
               fabricCanvas.add(editableArea);
             }
@@ -60,67 +61,65 @@ const CanvasComponent = () => {
       let previousScaleX = 1;
       let previousScaleY = 1;
       let previousAngle = 0;
-const MARGIN = 10; // Add this line
+      const MARGIN = 10; // Add this line
+      let isOutOfBounds = false;
+      let previousPosition = { left: 0, top: 0 };
 
-fabricCanvas.on("object:moving", (e) => {
-  const obj = e.target as fabric.Object; // Type assertion here
-  const area = shirtDesignConfig.editableAreas.find(
-    (area) => area.id === "front"
-  );
-  if (obj && area) {
-    const areaLeft = area.left * fabricCanvas.getWidth() + MARGIN;
-    const areaTop = area.top * fabricCanvas.getHeight() + MARGIN;
-    const areaRight = areaLeft + area.width * fabricCanvas.getWidth() - 2 * MARGIN;
-    const areaBottom = areaTop + area.height * fabricCanvas.getHeight() - 2 * MARGIN;
+      fabricCanvas.on("object:moving", (e) => {
+        const obj = e.target as fabric.Object; // Type assertion here
+        const area = shirtDesignConfig.editableAreas.find(
+          (area) => area.id === "front"
+        );
+        if (obj && area) {
+          const areaLeft = area.left * fabricCanvas.getWidth() + MARGIN;
+          const areaTop = area.top * fabricCanvas.getHeight() + MARGIN;
+          const areaRight =
+            areaLeft + area.width * fabricCanvas.getWidth() - 2 * MARGIN;
+          const areaBottom =
+            areaTop + area.height * fabricCanvas.getHeight() - 2 * MARGIN;
 
-    const boundingRect = obj.getBoundingRect(true);
+          const boundingRect = obj.getBoundingRect(true);
 
-    if (
-      boundingRect.left < areaLeft ||
-      boundingRect.top < areaTop ||
-      boundingRect.left + boundingRect.width > areaRight ||
-      boundingRect.top + boundingRect.height > areaBottom
-    ) {
-      const newLeft = obj.left !== undefined ? Math.min(
-        Math.max(obj.left, areaLeft + boundingRect.width / 2),
-        areaRight - boundingRect.width / 2
-      ) : areaLeft;
-      const newTop = obj.top !== undefined ? Math.min(
-        Math.max(obj.top, areaTop + boundingRect.height / 2),
-        areaBottom - boundingRect.height / 2
-      ) : areaTop;
-      obj.set({ left: newLeft, top: newTop }).setCoords();
-    }
-  }
-});
+          if (
+            boundingRect.left < areaLeft ||
+            boundingRect.top < areaTop ||
+            boundingRect.left + boundingRect.width > areaRight ||
+            boundingRect.top + boundingRect.height > areaBottom
+          ) {
+            isOutOfBounds = true;
+          } else {
+            isOutOfBounds = false;
+          }
+        }
+      });
 
-fabricCanvas.on("object:rotating", (e) => {
-  const obj = e.target as fabric.Object; // Type assertion here
-  const area = shirtDesignConfig.editableAreas.find(
-    (area) => area.id === "front"
-  );
-  if (obj && area) {
-    const areaLeft = area.left * fabricCanvas.getWidth() + MARGIN;
-    const areaTop = area.top * fabricCanvas.getHeight() + MARGIN;
-    const areaRight = areaLeft + area.width * fabricCanvas.getWidth() - 2 * MARGIN;
-    const areaBottom = areaTop + area.height * fabricCanvas.getHeight() - 2 * MARGIN;
+      fabricCanvas.on("object:rotating", (e) => {
+        const obj = e.target as fabric.Object; // Type assertion here
+        const area = shirtDesignConfig.editableAreas.find(
+          (area) => area.id === "front"
+        );
+        if (obj && area) {
+          const areaLeft = area.left * fabricCanvas.getWidth() + MARGIN;
+          const areaTop = area.top * fabricCanvas.getHeight() + MARGIN;
+          const areaRight =
+            areaLeft + area.width * fabricCanvas.getWidth() - 2 * MARGIN;
+          const areaBottom =
+            areaTop + area.height * fabricCanvas.getHeight() - 2 * MARGIN;
 
-    const boundingRect = obj.getBoundingRect(true);
+          const boundingRect = obj.getBoundingRect(true);
 
-    if (
-      boundingRect.left < areaLeft ||
-      boundingRect.top < areaTop ||
-      boundingRect.left + boundingRect.width > areaRight ||
-      boundingRect.top + boundingRect.height > areaBottom
-    ) {
-      if (obj.angle !== undefined) {
-        obj.angle = previousAngle;
-      }
-    }
-
-    previousAngle = obj.angle !== undefined ? obj.angle : previousAngle;
-  }
-});
+          if (
+            boundingRect.left < areaLeft ||
+            boundingRect.top < areaTop ||
+            boundingRect.left + boundingRect.width > areaRight ||
+            boundingRect.top + boundingRect.height > areaBottom
+          ) {
+            isOutOfBounds = true;
+          } else {
+            isOutOfBounds = false;
+          }
+        }
+      });
 
       fabricCanvas.on("object:scaling", (e) => {
         const obj = e.target as fabric.Object; // Type assertion here
@@ -151,55 +150,32 @@ fabricCanvas.on("object:rotating", (e) => {
         const area = shirtDesignConfig.editableAreas.find(
           (area) => area.id === "front"
         );
-        if (obj && area && obj.scaleX && obj.scaleY && obj.left && obj.top) {
-          const areaWidth = area.width * fabricCanvas.getWidth();
-          const areaHeight = area.height * fabricCanvas.getHeight();
-          const areaLeft = area.left * fabricCanvas.getWidth();
-          const areaTop = area.top * fabricCanvas.getHeight();
-          const areaRight = areaLeft + areaWidth;
-          const areaBottom = areaTop + areaHeight;
+        if (obj && area && isOutOfBounds) {
+          const areaLeft = area.left * fabricCanvas.getWidth() + MARGIN;
+          const areaTop = area.top * fabricCanvas.getHeight() + MARGIN;
+          const areaRight =
+            areaLeft + area.width * fabricCanvas.getWidth() - 2 * MARGIN;
+          const areaBottom =
+            areaTop + area.height * fabricCanvas.getHeight() - 2 * MARGIN;
 
-          if (
-            obj.getScaledWidth() > areaWidth &&
-            obj.scaleX >= previousScaleX
-          ) {
-            obj.scaleX = areaWidth / obj.width;
-            obj.lockScalingX = obj.scaleX >= previousScaleX; // Lock scaling up in the X direction
-          } else {
-            obj.lockScalingX = false; // Unlock scaling in the X direction
-          }
-          if (
-            obj.getScaledHeight() > areaHeight &&
-            obj.scaleY >= previousScaleY
-          ) {
-            obj.scaleY = areaHeight / obj.height;
-            obj.lockScalingY = obj.scaleY >= previousScaleY; // Lock scaling up in the Y direction
-          } else {
-            obj.lockScalingY = false; // Unlock scaling in the Y direction
-          }
+          const boundingRect = obj.getBoundingRect(true);
 
-          const objLeft = obj.left;
-          const objTop = obj.top;
-
-          if (
-            objLeft - obj.getScaledWidth() / 2 < areaLeft ||
-            objTop - obj.getScaledHeight() / 2 < areaTop ||
-            objLeft + obj.getScaledWidth() / 2 > areaRight ||
-            objTop + obj.getScaledHeight() / 2 > areaBottom
-          ) {
-            obj
-              .set({
-                left: Math.min(
-                  Math.max(objLeft, areaLeft + obj.getScaledWidth() / 2),
-                  areaRight - obj.getScaledWidth() / 2
-                ),
-                top: Math.min(
-                  Math.max(objTop, areaTop + obj.getScaledHeight() / 2),
-                  areaBottom - obj.getScaledHeight() / 2
-                ),
-              })
-              .setCoords();
-          }
+          const newLeft =
+            obj.left !== undefined
+              ? Math.min(
+                  Math.max(obj.left, areaLeft + boundingRect.width / 2),
+                  areaRight - boundingRect.width / 2
+                )
+              : areaLeft;
+          const newTop =
+            obj.top !== undefined
+              ? Math.min(
+                  Math.max(obj.top, areaTop + boundingRect.height / 2),
+                  areaBottom - boundingRect.height / 2
+                )
+              : areaTop;
+          obj.set({ left: newLeft, top: newTop }).setCoords();
+          isOutOfBounds = false;
         }
       });
 

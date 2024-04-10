@@ -39,18 +39,19 @@ const NavigatorContainer: React.FC = () => {
           <h4 className="px-5 py-2">Layers</h4>
         </div>
         <div className="px-1 flex flex-col gap-1  ">
-          {objects
-            .slice()
-            .reverse()
-            .map((object, index) => (
-              <NavigatorItem
-                key={index}
-                object={object}
-                index={index}
-                moveObject={moveObject}
-                color={colors[index % colors.length]}
-              />
-            ))}
+{objects
+  .slice()
+  .reverse()
+  .filter((object) => !object.excludeFromNavigator) // Filtrujemy obiekty, które mają pole excludeFromNavigator ustawione na true
+  .map((object, index) => (
+    <NavigatorItem
+      key={index}
+      object={object}
+      index={index}
+      moveObject={moveObject}
+      color={colors[index % colors.length]}
+    />
+  ))}
         </div>
       </PopoverContent>
     </Popover>
