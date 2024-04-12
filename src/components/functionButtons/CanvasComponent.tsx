@@ -2,12 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import { fabric } from "fabric";
-import { useCanvas } from "./CanvasContext";
-import shirtDesignConfig from "../lib/clothConfig";
+import { useCanvas } from "../../context/CanvasContext";
+import shirtDesignConfig from "../../lib/clothConfig";
 
 const CanvasComponent = () => {
   const { canvasInstanceRef, setCanvasInstanceRef, setObjects } = useCanvas();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  //Initialization of Editable Area
 
   useEffect(() => {
     if (canvasRef.current && !canvasInstanceRef) {
@@ -61,9 +63,11 @@ const CanvasComponent = () => {
       let previousScaleX = 1;
       let previousScaleY = 1;
       let previousAngle = 0;
-      const MARGIN = 10; // Add this line
+      const MARGIN = 5; // Add this line
       let isOutOfBounds = false;
       let previousPosition = { left: 0, top: 0 };
+      let previousLeft = 0;
+      let previousTop = 0;
 
       fabricCanvas.on("object:moving", (e) => {
         const obj = e.target as fabric.Object; // Type assertion here
@@ -93,57 +97,119 @@ const CanvasComponent = () => {
         }
       });
 
-      fabricCanvas.on("object:rotating", (e) => {
-        const obj = e.target as fabric.Object; // Type assertion here
-        const area = shirtDesignConfig.editableAreas.find(
-          (area) => area.id === "front"
-        );
-        if (obj && area) {
-          const areaLeft = area.left * fabricCanvas.getWidth() + MARGIN;
-          const areaTop = area.top * fabricCanvas.getHeight() + MARGIN;
-          const areaRight =
-            areaLeft + area.width * fabricCanvas.getWidth() - 2 * MARGIN;
-          const areaBottom =
-            areaTop + area.height * fabricCanvas.getHeight() - 2 * MARGIN;
+fabricCanvas.on("object:rotating", (e) => {
+  const obj = e.target as fabric.Object; // Type assertion here
+  const area = shirtDesignConfig.editableAreas.find(
+    (area) => area.id === "front"
+  );
+  if (obj && area) {
+    const areaLeft = area.left * fabricCanvas.getWidth() + MARGIN;
+    const areaTop = area.top * fabricCanvas.getHeight() + MARGIN;
+    const areaRight =
+      areaLeft + area.width * fabricCanvas.getWidth() - 2 * MARGIN;
+    const areaBottom =
+      areaTop + area.height * fabricCanvas.getHeight() - 2 * MARGIN;
 
-          const boundingRect = obj.getBoundingRect(true);
+    obj.set({
+      originX: 'center',
+      originY: 'center',
+    });
 
-          if (
-            boundingRect.left < areaLeft ||
-            boundingRect.top < areaTop ||
-            boundingRect.left + boundingRect.width > areaRight ||
-            boundingRect.top + boundingRect.height > areaBottom
-          ) {
-            isOutOfBounds = true;
-          } else {
-            isOutOfBounds = false;
-          }
-        }
+    const boundingRect = obj.getBoundingRect(true);
+
+    if (
+      boundingRect.left < areaLeft ||
+      boundingRect.top < areaTop ||
+      boundingRect.left + boundingRect.width > areaRight ||
+      boundingRect.top + boundingRect.height > areaBottom
+    ) {
+      isOutOfBounds = true;
+
+      // Calculate the maximum scale that the object can have to fit within the area
+      const maxScaleX = obj.width
+        ? (areaRight - areaLeft) / obj.width
+        : 1;
+      const maxScaleY = obj.height
+        ? (areaBottom - areaTop) / obj.height
+        : 1;
+      const maxScale = Math.min(maxScaleX, maxScaleY);
+
+      // Set the object's scale to the maximum scale
+      obj.set({
+        scaleX: maxScale,
+        scaleY: maxScale,
       });
 
-      fabricCanvas.on("object:scaling", (e) => {
-        const obj = e.target as fabric.Object; // Type assertion here
-        const area = shirtDesignConfig.editableAreas.find(
-          (area) => area.id === "front"
-        );
-        if (obj && area) {
-          const areaWidth = area.width * fabricCanvas.getWidth();
-          const areaHeight = area.height * fabricCanvas.getHeight();
+      // Force the canvas to re-render
+      fabricCanvas.renderAll();
+    } else {
+      isOutOfBounds = false;
+    }
 
-          if (obj.getScaledWidth() > areaWidth && obj.scaleX > previousScaleX) {
-            obj.scaleX = previousScaleX;
-          }
-          if (
-            obj.getScaledHeight() > areaHeight &&
-            obj.scaleY > previousScaleY
-          ) {
-            obj.scaleY = previousScaleY;
-          }
+    obj.set({
+      originX: 'left',
+      originY: 'top',
+    });
+  }
+});
 
-          previousScaleX = obj.scaleX;
-          previousScaleY = obj.scaleY;
-        }
+fabricCanvas.on("object:scaling", (e) => {
+  const obj = e.target as any;
+  const area = shirtDesignConfig.editableAreas.find(
+    (area) => area.id === "front"
+  );
+  if (obj && area) {
+    const areaLeft = area.left * fabricCanvas.getWidth() + MARGIN;
+    const areaTop = area.top * fabricCanvas.getHeight() + MARGIN;
+    const areaRight =
+      areaLeft + area.width * fabricCanvas.getWidth() - 2 * MARGIN;
+    const areaBottom =
+      areaTop + area.height * fabricCanvas.getHeight() - 2 * MARGIN;
+
+    const objectCorners = obj.getBoundingRect();
+
+    const collisionLeft = objectCorners.left < areaLeft;
+    const collisionTop = objectCorners.top < areaTop;
+    const collisionRight = objectCorners.left + objectCorners.width > areaRight;
+    const collisionBottom = objectCorners.top + objectCorners.height > areaBottom;
+
+    const scalingDownX = (obj.scaleX || 1) < previousScaleX;
+    const scalingDownY = (obj.scaleY || 1) < previousScaleY;
+
+    if (collisionLeft && !scalingDownX) {
+      obj.set({
+        scaleX: previousScaleX,
+        left: previousLeft,
       });
+    }
+
+    if (collisionTop && !scalingDownY) {
+      obj.set({
+        scaleY: previousScaleY,
+        top: previousTop,
+      });
+    }
+
+    if (collisionRight && !scalingDownX) {
+      obj.set({
+        scaleX: previousScaleX,
+        left: previousLeft,
+      });
+    }
+
+    if (collisionBottom && !scalingDownY) {
+      obj.set({
+        scaleY: previousScaleY,
+        top: previousTop,
+      });
+    }
+
+    previousScaleX = obj.scaleX || 1;
+    previousScaleY = obj.scaleY || 1;
+    previousLeft = obj.left;
+    previousTop = obj.top;
+  }
+});
 
       fabricCanvas.on("object:modified", (e) => {
         const obj = e.target as fabric.Object; // Type assertion here

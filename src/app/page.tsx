@@ -12,7 +12,7 @@ const fontSans = FontSans({
   variable: "--font-sans",
 })
 const CanvasComponentWithNoSSR = dynamic(
-  () => import("../context/CanvasComponent"),
+  () => import("../components/functionButtons/CanvasComponent"),
   {
     ssr: false,
   }
